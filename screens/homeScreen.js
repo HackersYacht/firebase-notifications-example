@@ -12,11 +12,25 @@ import {
   TabHeading,
   Button,
   Right,
-  Content
+  Content,
+  Fab
 } from "native-base";
 import { StyleSheet, View } from "react-native";
 
 import ChatList from "../components/chatList";
+
+import firebase from "react-native-firebase";
+
+import ImagePicker from "react-native-image-picker";
+
+const options = {
+  title: "Select Avatar",
+  customButtons: [{ name: "fb", title: "Choose Photo from Facebook" }],
+  storageOptions: {
+    skipBackup: true,
+    path: "images"
+  }
+};
 
 export default class HomeScreen extends Component {
   state = {
@@ -29,6 +43,41 @@ export default class HomeScreen extends Component {
       () => this.setState({ page: 1, scrollWithoutAnimation: false }),
       0.1
     );
+  }
+
+  pickImage() {
+    ImagePicker.showImagePicker(options, response => {
+      console.log("Response = ", response);
+
+      if (response.didCancel) {
+        console.log("User cancelled image picker");
+      } else if (response.error) {
+        console.log("ImagePicker Error: ", response.error);
+      } else if (response.customButton) {
+        console.log("User tapped custom button: ", response.customButton);
+      } else {
+        const source = { uri: response.uri };
+
+        // You can also display the image using data:
+        // const source = { uri: 'data:image/jpeg;base64,' + response.data };
+
+        //upload image
+        let uploadTask = firebase
+          .storage()
+          .ref()
+          .child("img-" + new Date().getTime())
+          .putFile(response.uri)
+          .then(snap => {
+            console.log(snap.downloadURL);
+          })
+          .catch(err => console.log(err));
+
+        this.setState({
+          avatarSource: source,
+          base64Img: response.data
+        });
+      }
+    });
   }
 
   render() {
@@ -62,6 +111,10 @@ export default class HomeScreen extends Component {
           </Tab>
           <Tab heading="CHATS">
             <ChatList navigation={this.props.navigation} />
+
+            <Fab onPress={() => this.pickImage()}>
+              <Icon name="camera" />
+            </Fab>
           </Tab>
           <Tab heading="STATUS">
             <Text>Status</Text>
